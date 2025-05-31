@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Peta Jalan Rusak Lamongan Kota</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"
+  />
+  <style>
+    #map {
+      height: 600px;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    #info {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      padding: 10px;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      max-width: 400px;
+    }
+    ul {
+      padding-left: 0;
+      list-style: none;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+    .color-box {
+      display: inline-block;
+      width: 20px;
+      height: 10px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <h2>Peta Jalan Rusak di Lamongan Kota</h2>
+  <div id="map"></div>
+  <div id="info">
+    <h4>Keterangan Warna:</h4>
+    <ul>
+      <li><span class="color-box" style="background:red;"></span> Jalan rusak / kondisi buruk</li>
+      <li><span class="color-box" style="background:orange;"></span> Jalan bergelombang / permukaan kasar</li>
+      <li><span class="color-box" style="background:gray;"></span> Jalan lainnya</li>
+    </ul>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+    const map = L.map('map').setView([-7.13, 112.4], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Fungsi untuk menentukan warna garis jalan berdasarkan properti
+    function getRoadColor(properties) {
+      // Contoh asumsi properties dari GeoJSON
+      // kamu bisa sesuaikan sesuai data sebenarnya di lamongan_roads.geojson
+      const tags = properties.tags || {};
+      if (
+        tags.condition === 'bad' ||
+        tags.condition === 'poor' ||
+        tags.condition === 'very_bad'
+      ) return 'red';
+
+      if (
+        ['bad', 'very_bad', 'horrible', 'very_horrible', 'impassable'].includes(
+          tags.smoothness
+        )
+      ) return 'orange';
+
+      if (
+        ['unpaved', 'gravel', 'dirt', 'ground', 'earth'].includes(tags.surface)
+      ) return 'orange';
+
+      return 'gray';
+    }
+
+    fetch('lamongan_roads.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: feature => {
+            return {
+              color: getRoadColor(feature.properties),
+              weight: 4
+            };
+          },
+          onEachFeature: (feature, layer) => {
+            const tags = feature.properties.tags || {};
+            let info = '<b>Jalan</b><br>';
+            if (tags.name) info += `Nama: ${tags.name}<br>`;
+            if (tags.highway) info += `Jenis: ${tags.highway}<br>`;
+            if (tags.condition) info += `Kondisi: ${tags.condition}<br>`;
+            if (tags.smoothness) info += `Permukaan: ${tags.smoothness}<br>`;
+            if (tags.surface) info += `Tipe permukaan: ${tags.surface}<br>`;
+            layer.bindPopup(info);
+          }
+        }).addTo(map);
+      })
+      .catch(error => {
+        alert('Gagal memuat data GeoJSON: ' + error);
+      });
+  </script>
+</body>
+</html>
